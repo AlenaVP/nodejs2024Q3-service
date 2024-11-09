@@ -51,7 +51,7 @@ export class UserController {
     const user = this.userService.findOne(id);
 
     if (!user) {
-      throw new NotFoundException(ErrorMessage.USER_NOT_FOUND);
+      throw new NotFoundException('User', ErrorMessage.NOT_FOUND);
     }
 
     return user;
@@ -69,7 +69,7 @@ export class UserController {
     const result = this.userService.updatePassword(id, updateUserDto);
 
     if (result === UpdateUserPasswordError.UserNotFound) {
-      throw new NotFoundException(ErrorMessage.USER_NOT_FOUND);
+      throw new NotFoundException('User', ErrorMessage.NOT_FOUND);
     }
 
     if (result === UpdateUserPasswordError.WrongPassword) {
@@ -89,7 +89,7 @@ export class UserController {
     const result = this.userService.remove(id);
 
     if (!result) {
-      throw new NotFoundException(ErrorMessage.USER_NOT_FOUND);
+      throw new NotFoundException('User', ErrorMessage.NOT_FOUND);
     }
   }
 }
