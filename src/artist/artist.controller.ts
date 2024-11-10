@@ -82,7 +82,7 @@ export class ArtistController {
     const artist = this.artistService.findOne(id);
 
     if (!artist) {
-      throw new NotFoundException('Artist', ErrorMessage.NOT_FOUND);
+      throw new NotFoundException(ErrorMessage.ARTIST_NOT_FOUND);
     }
 
     return artist;
@@ -121,7 +121,7 @@ export class ArtistController {
     const updatedArtist = this.artistService.updateInfo(id, updateArtistDto);
 
     if (!updatedArtist) {
-      throw new NotFoundException('Artist', ErrorMessage.NOT_FOUND);
+      throw new NotFoundException(ErrorMessage.ARTIST_NOT_FOUND);
     }
 
     return updatedArtist;
@@ -157,7 +157,7 @@ export class ArtistController {
     const result = this.artistService.remove(id);
 
     if (!result) {
-      throw new NotFoundException('Artist', ErrorMessage.NOT_FOUND);
+      throw new NotFoundException(ErrorMessage.ARTIST_NOT_FOUND);
     }
   }
 }

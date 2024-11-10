@@ -83,7 +83,7 @@ export class TrackController {
     const track = this.trackService.findOne(id);
 
     if (!track) {
-      throw new NotFoundException('Track', ErrorMessage.NOT_FOUND);
+      throw new NotFoundException(ErrorMessage.TRACK_NOT_FOUND);
     }
 
     return track;
@@ -120,7 +120,7 @@ export class TrackController {
     const updatedTrack = this.trackService.updateInfo(id, updateTrackDto);
 
     if (!updatedTrack) {
-      throw new NotFoundException('Track', ErrorMessage.NOT_FOUND);
+      throw new NotFoundException(ErrorMessage.TRACK_NOT_FOUND);
     }
 
     return updatedTrack;
@@ -156,7 +156,7 @@ export class TrackController {
     const result = this.trackService.remove(id);
 
     if (!result) {
-      throw new NotFoundException('Track', ErrorMessage.NOT_FOUND);
+      throw new NotFoundException(ErrorMessage.TRACK_NOT_FOUND);
     }
   }
 }

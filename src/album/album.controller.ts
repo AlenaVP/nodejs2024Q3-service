@@ -83,7 +83,7 @@ export class AlbumController {
     const album = this.albumService.findOne(id);
 
     if (!album) {
-      throw new NotFoundException('Album', ErrorMessage.NOT_FOUND);
+      throw new NotFoundException(ErrorMessage.ALBUM_NOT_FOUND);
     }
 
     return album;
@@ -120,7 +120,7 @@ export class AlbumController {
     const updatedAlbum = this.albumService.updateInfo(id, updateAlbumDto);
 
     if (!updatedAlbum) {
-      throw new NotFoundException('Album', ErrorMessage.NOT_FOUND);
+      throw new NotFoundException(ErrorMessage.ALBUM_NOT_FOUND);
     }
 
     return updatedAlbum;
@@ -156,7 +156,7 @@ export class AlbumController {
     const result = this.albumService.remove(id);
 
     if (!result) {
-      throw new NotFoundException('Album', ErrorMessage.NOT_FOUND);
+      throw new NotFoundException(ErrorMessage.ALBUM_NOT_FOUND);
     }
   }
 }
