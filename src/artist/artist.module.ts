@@ -1,13 +1,14 @@
 import { Module } from '@nestjs/common';
-import { UuidService } from '@shared/service/uuid/uuid.service';
+import { SharedModule } from '@shared/shared.module';
 import { ArtistController } from './artist.controller';
 import { ArtistService } from './artist.service';
-import { AlbumService } from 'src/album/album.service';
-import { TrackService } from 'src/track/track.service';
+import { AlbumModule } from 'src/album/album.module';
+import { TrackModule } from 'src/track/track.module';
 
 @Module({
   controllers: [ArtistController],
-  providers: [ArtistService, AlbumService, TrackService, UuidService],
+  providers: [ArtistService],
+  imports: [SharedModule, AlbumModule, TrackModule],
   exports: [ArtistService],
 })
 export class ArtistModule {}

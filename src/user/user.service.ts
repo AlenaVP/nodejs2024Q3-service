@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { plainToClass } from 'class-transformer';
 import { UpdateUserPasswordError } from '@shared/constants/enums';
+import { InMemoryDbService } from '@shared/service/in-memory-db/in-memory-db.service';
 import { UuidService } from '@shared/service/uuid/uuid.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -8,9 +9,10 @@ import { User } from './entities/user.entity';
 
 @Injectable()
 export class UserService {
-  private userDb = new Map<string, User>();
-
-  constructor(private readonly uuidService: UuidService) {}
+  constructor(
+    private readonly inMemoryDbService: InMemoryDbService,
+    private readonly uuidService: UuidService,
+  ) {}
 
   create(createUserDto: CreateUserDto): User {
     const { login, password } = createUserDto;
@@ -23,17 +25,19 @@ export class UserService {
       createdAt: date,
       updatedAt: date,
     };
-    this.userDb.set(newUser.id, newUser);
+    this.inMemoryDbService.users.add(newUser.id, newUser);
 
     return plainToClass(User, newUser);
   }
 
   findAll(): User[] {
-    return [...this.userDb.values()].map((user) => plainToClass(User, user));
+    const users = this.inMemoryDbService.users.findAll();
+
+    return users.map((user) => plainToClass(User, user));
   }
 
   findOne(id: string): User | null {
-    const user = this.userDb.get(id);
+    const user = this.inMemoryDbService.users.findOne(id);
 
     if (!user) {
       return null;
@@ -46,7 +50,7 @@ export class UserService {
     id: string,
     { oldPassword, newPassword }: UpdateUserDto,
   ): User | UpdateUserPasswordError {
-    const user = this.userDb.get(id);
+    const user = this.inMemoryDbService.users.findOne(id);
 
     if (!user) {
       return UpdateUserPasswordError.UserNotFound;
@@ -63,17 +67,12 @@ export class UserService {
       updatedAt: Date.now(),
     };
 
-    this.userDb.set(id, updatedUser);
+    this.inMemoryDbService.users.add(id, updatedUser);
 
     return plainToClass(User, updatedUser);
   }
 
   remove(id: string): boolean {
-    if (this.userDb.has(id)) {
-      this.userDb.delete(id);
-      return true;
-    }
-
-    return false;
+    return this.inMemoryDbService.users.delete(id);
   }
 }

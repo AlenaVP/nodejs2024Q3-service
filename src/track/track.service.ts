@@ -1,44 +1,51 @@
 import { Injectable } from '@nestjs/common';
 import { plainToClass } from 'class-transformer';
+import { UnknownIdException } from '@shared/exceptions/unknown-id.exception';
+import { InMemoryDbService } from '@shared/service/in-memory-db/in-memory-db.service';
 import { UuidService } from '@shared/service/uuid/uuid.service';
 import { CreateTrackDto } from './dto/create-track.dto';
 import { UpdateTrackDto } from './dto/update-track.dto';
-import { TrackBase } from './track.interface';
 import { Track } from './entities/track.entity';
 
 @Injectable()
 export class TrackService {
-  private trackDb = new Map<string, TrackBase>();
-  static instance: TrackService;
-
-  constructor(private readonly uuidService: UuidService) {
-    if (!!TrackService.instance) {
-      return TrackService.instance;
-    }
-
-    TrackService.instance = this;
-
-    return this;
-  }
+  constructor(
+    private readonly inMemoryDbService: InMemoryDbService,
+    private readonly uuidService: UuidService,
+  ) {}
 
   create(createTrackDto: CreateTrackDto): Track {
+    if (
+      createTrackDto.artistId &&
+      !this.inMemoryDbService.artists.has(createTrackDto.artistId)
+    ) {
+      throw new UnknownIdException('artistId');
+    }
+
+    if (
+      createTrackDto.albumId &&
+      !this.inMemoryDbService.albums.has(createTrackDto.albumId)
+    ) {
+      throw new UnknownIdException('albumId');
+    }
+
     const newTrack: Track = {
       ...createTrackDto,
       id: this.uuidService.generate(),
     };
-    this.trackDb.set(newTrack.id, newTrack);
+    this.inMemoryDbService.tracks.add(newTrack.id, newTrack);
 
     return plainToClass(Track, newTrack);
   }
 
   findAll(): Track[] {
-    return [...this.trackDb.values()].map((track) =>
-      plainToClass(Track, track),
-    );
+    const tracks = this.inMemoryDbService.tracks.findAll();
+
+    return tracks.map((track) => plainToClass(Track, track));
   }
 
   findOne(id: string): Track | null {
-    const track = this.trackDb.get(id);
+    const track = this.inMemoryDbService.tracks.findOne(id);
 
     if (!track) {
       return null;
@@ -48,7 +55,21 @@ export class TrackService {
   }
 
   updateInfo(id: string, updateTrackDto: UpdateTrackDto): Track | null {
-    const track = this.trackDb.get(id);
+    if (
+      updateTrackDto.artistId &&
+      !this.inMemoryDbService.artists.has(updateTrackDto.artistId)
+    ) {
+      throw new UnknownIdException('artistId');
+    }
+
+    if (
+      updateTrackDto.albumId &&
+      !this.inMemoryDbService.albums.has(updateTrackDto.albumId)
+    ) {
+      throw new UnknownIdException('albumId');
+    }
+
+    const track = this.inMemoryDbService.tracks.findOne(id);
 
     if (!track) {
       return null;
@@ -59,31 +80,26 @@ export class TrackService {
       ...updateTrackDto,
     };
 
-    this.trackDb.set(track.id, updatedTrack);
+    this.inMemoryDbService.tracks.add(track.id, updatedTrack);
 
     return plainToClass(Track, updatedTrack);
   }
 
   remove(id: string): boolean {
-    if (this.trackDb.has(id)) {
-      this.trackDb.delete(id);
-      return true;
-    }
-
-    return false;
+    return this.inMemoryDbService.tracks.delete(id);
   }
 
-  cleanupWithAlbumDeletion(albumId: string): void {
-    this.trackDb.forEach((track) => {
-      if (track.albumId === albumId) {
+  handleAlbumRemoval(id: string): void {
+    this.inMemoryDbService.tracks.forEach((track) => {
+      if (track.albumId === id) {
         track.albumId = null;
       }
     });
   }
 
-  cleanupWithArtistDeletion(artistId: string): void {
-    this.trackDb.forEach((track) => {
-      if (track.artistId === artistId) {
+  handleArtistRemoval(id: string): void {
+    this.inMemoryDbService.tracks.forEach((track) => {
+      if (track.artistId === id) {
         track.artistId = null;
       }
     });

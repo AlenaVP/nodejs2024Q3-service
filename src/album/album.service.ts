@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { plainToClass } from 'class-transformer';
+import { UnknownIdException } from '@shared/exceptions/unknown-id.exception';
+import { InMemoryDbService } from '@shared/service/in-memory-db/in-memory-db.service';
 import { UuidService } from '@shared/service/uuid/uuid.service';
 import { CreateAlbumDto } from './dto/create-album.dto';
 import { UpdateAlbumDto } from './dto/update-album.dto';
@@ -8,40 +10,37 @@ import { TrackService } from 'src/track/track.service';
 
 @Injectable()
 export class AlbumService {
-  private albumDb = new Map<string, Album>();
-  static instance: AlbumService;
-
   constructor(
+    private readonly inMemoryDbService: InMemoryDbService,
     private readonly trackService: TrackService,
     private readonly uuidService: UuidService,
-  ) {
-    if (!!AlbumService.instance) {
-      return AlbumService.instance;
-    }
-
-    AlbumService.instance = this;
-
-    return this;
-  }
+  ) {}
 
   create(createAlbumDto: CreateAlbumDto): Album {
+    if (
+      createAlbumDto.artistId &&
+      !this.inMemoryDbService.artists.has(createAlbumDto.artistId)
+    ) {
+      throw new UnknownIdException('artistId');
+    }
+
     const newAlbum: Album = {
       ...createAlbumDto,
       id: this.uuidService.generate(),
     };
-    this.albumDb.set(newAlbum.id, newAlbum);
+    this.inMemoryDbService.albums.add(newAlbum.id, newAlbum);
 
     return plainToClass(Album, newAlbum);
   }
 
   findAll(): Album[] {
-    return [...this.albumDb.values()].map((album) =>
-      plainToClass(Album, album),
-    );
+    const albums = this.inMemoryDbService.albums.findAll();
+
+    return albums.map((album) => plainToClass(Album, album));
   }
 
   findOne(id: string): Album | null {
-    const album = this.albumDb.get(id);
+    const album = this.inMemoryDbService.albums.findOne(id);
 
     if (!album) {
       return null;
@@ -51,7 +50,14 @@ export class AlbumService {
   }
 
   updateInfo(id: string, updateAlbumDto: UpdateAlbumDto): Album | null {
-    const album = this.albumDb.get(id);
+    if (
+      updateAlbumDto.artistId &&
+      !this.inMemoryDbService.artists.has(updateAlbumDto.artistId)
+    ) {
+      throw new UnknownIdException('artistId');
+    }
+
+    const album = this.inMemoryDbService.albums.findOne(id);
 
     if (!album) {
       return null;
@@ -62,25 +68,24 @@ export class AlbumService {
       ...updateAlbumDto,
     };
 
-    this.albumDb.set(album.id, updatedAlbum);
+    this.inMemoryDbService.albums.add(album.id, updatedAlbum);
 
     return plainToClass(Album, updatedAlbum);
   }
 
   remove(id: string): boolean {
-    if (this.albumDb.has(id)) {
-      this.albumDb.delete(id);
-      this.trackService.cleanupWithAlbumDeletion(id);
-      return true;
+    if (this.inMemoryDbService.albums.has(id)) {
+      this.trackService.handleAlbumRemoval(id);
+
+      return this.inMemoryDbService.albums.delete(id);
     }
 
     return false;
   }
 
-  cleanupWithArtistDeletion(artistId: string): void {
-    this.albumDb.forEach((album) => {
-      console.log(`album id: ${album.id}`);
-      if (album.artistId === artistId) {
+  handleArtistRemoval(id: string): void {
+    this.inMemoryDbService.albums.forEach((album) => {
+      if (album.artistId === id) {
         album.artistId = null;
       }
     });
