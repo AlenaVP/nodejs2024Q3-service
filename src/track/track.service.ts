@@ -6,11 +6,13 @@ import { UuidService } from '@shared/service/uuid/uuid.service';
 import { CreateTrackDto } from './dto/create-track.dto';
 import { UpdateTrackDto } from './dto/update-track.dto';
 import { Track } from './entities/track.entity';
+import { FavsService } from 'src/favs/favs.service';
 
 @Injectable()
 export class TrackService {
   constructor(
     private readonly inMemoryDbService: InMemoryDbService,
+    private readonly favsService: FavsService,
     private readonly uuidService: UuidService,
   ) {}
 
@@ -54,6 +56,16 @@ export class TrackService {
     return plainToClass(Track, track);
   }
 
+  findMany(ids: string[]): Track[] {
+    const tracks = this.inMemoryDbService.tracks.findMany(ids);
+
+    return tracks.map((track) => plainToClass(Track, track));
+  }
+
+  isExists(id: string): boolean {
+    return this.inMemoryDbService.tracks.has(id);
+  }
+
   updateInfo(id: string, updateTrackDto: UpdateTrackDto): Track | null {
     if (
       updateTrackDto.artistId &&
@@ -86,6 +98,8 @@ export class TrackService {
   }
 
   remove(id: string): boolean {
+    this.favsService.removeTrack(id);
+
     return this.inMemoryDbService.tracks.delete(id);
   }
 

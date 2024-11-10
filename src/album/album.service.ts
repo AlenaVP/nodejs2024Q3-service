@@ -7,12 +7,14 @@ import { CreateAlbumDto } from './dto/create-album.dto';
 import { UpdateAlbumDto } from './dto/update-album.dto';
 import { Album } from './entities/album.entity';
 import { TrackService } from 'src/track/track.service';
+import { FavsService } from 'src/favs/favs.service';
 
 @Injectable()
 export class AlbumService {
   constructor(
     private readonly inMemoryDbService: InMemoryDbService,
     private readonly trackService: TrackService,
+    private readonly favsService: FavsService,
     private readonly uuidService: UuidService,
   ) {}
 
@@ -49,6 +51,16 @@ export class AlbumService {
     return plainToClass(Album, album);
   }
 
+  findMany(ids: string[]): Album[] {
+    const albums = this.inMemoryDbService.albums.findMany(ids);
+
+    return albums.map((album) => plainToClass(Album, album));
+  }
+
+  isExists(id: string): boolean {
+    return this.inMemoryDbService.albums.has(id);
+  }
+
   updateInfo(id: string, updateAlbumDto: UpdateAlbumDto): Album | null {
     if (
       updateAlbumDto.artistId &&
@@ -75,6 +87,7 @@ export class AlbumService {
 
   remove(id: string): boolean {
     if (this.inMemoryDbService.albums.has(id)) {
+      this.favsService.removeAlbum(id);
       this.trackService.handleAlbumRemoval(id);
 
       return this.inMemoryDbService.albums.delete(id);

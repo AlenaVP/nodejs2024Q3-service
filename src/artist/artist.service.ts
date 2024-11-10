@@ -7,6 +7,7 @@ import { UpdateArtistDto } from './dto/update-artist.dto';
 import { Artist } from './entities/artist.entity';
 import { AlbumService } from 'src/album/album.service';
 import { TrackService } from 'src/track/track.service';
+import { FavsService } from 'src/favs/favs.service';
 
 @Injectable()
 export class ArtistService {
@@ -14,6 +15,7 @@ export class ArtistService {
     private readonly albumService: AlbumService,
     private readonly inMemoryDbService: InMemoryDbService,
     private readonly trackService: TrackService,
+    private readonly favsService: FavsService,
     private readonly uuidService: UuidService,
   ) {}
 
@@ -43,6 +45,16 @@ export class ArtistService {
     return plainToClass(Artist, artist);
   }
 
+  findMany(ids: string[]): Artist[] {
+    const artists = this.inMemoryDbService.artists.findMany(ids);
+
+    return artists.map((artist) => plainToClass(Artist, artist));
+  }
+
+  isExists(id: string): boolean {
+    return this.inMemoryDbService.artists.has(id);
+  }
+
   updateInfo(id: string, updateArtistDto: UpdateArtistDto): Artist | null {
     const artist = this.inMemoryDbService.artists.findOne(id);
 
@@ -62,6 +74,7 @@ export class ArtistService {
 
   remove(id: string): boolean {
     if (this.inMemoryDbService.artists.has(id)) {
+      this.favsService.removeArtist(id);
       this.albumService.handleArtistRemoval(id);
       this.trackService.handleArtistRemoval(id);
 
