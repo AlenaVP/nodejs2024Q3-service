@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -8,12 +7,13 @@ import {
   HttpStatus,
   NotFoundException,
   Param,
+  ParseUUIDPipe,
   Post,
   Put,
 } from '@nestjs/common';
 import { ApiTags, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { ErrorMessage } from '@shared/constants/enums';
-import { UuidService } from '@shared/service/uuid/uuid.service';
+import { UUID_VERSION } from '@shared/constants/uuid';
 import { AlbumService } from './album.service';
 import { AlbumResponseDto } from './dto/album-response.dto';
 import { CreateAlbumDto } from './dto/create-album.dto';
@@ -22,10 +22,7 @@ import { UpdateAlbumDto } from './dto/update-album.dto';
 @ApiTags('album')
 @Controller('album')
 export class AlbumController {
-  constructor(
-    private readonly albumService: AlbumService,
-    private readonly uuidService: UuidService,
-  ) {}
+  constructor(private readonly albumService: AlbumService) {}
 
   @Post()
   @ApiResponse({
@@ -75,11 +72,9 @@ export class AlbumController {
     status: HttpStatus.NOT_FOUND,
     description: 'Album with provided id was not found',
   })
-  findOne(@Param('id') id: string) {
-    if (!this.uuidService.validate(id)) {
-      throw new BadRequestException(ErrorMessage.INVALID_ID);
-    }
-
+  findOne(
+    @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
+  ) {
     const album = this.albumService.findOne(id);
 
     if (!album) {
@@ -112,11 +107,10 @@ export class AlbumController {
     status: HttpStatus.NOT_FOUND,
     description: 'Album with provided id was not found',
   })
-  update(@Param('id') id: string, @Body() updateAlbumDto: UpdateAlbumDto) {
-    if (!this.uuidService.validate(id)) {
-      throw new BadRequestException(ErrorMessage.INVALID_ID);
-    }
-
+  update(
+    @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
+    @Body() updateAlbumDto: UpdateAlbumDto,
+  ) {
     const updatedAlbum = this.albumService.updateInfo(id, updateAlbumDto);
 
     if (!updatedAlbum) {
@@ -148,11 +142,9 @@ export class AlbumController {
     status: HttpStatus.NOT_FOUND,
     description: 'Album with provided id was not found',
   })
-  remove(@Param('id') id: string) {
-    if (!this.uuidService.validate(id)) {
-      throw new BadRequestException(ErrorMessage.INVALID_ID);
-    }
-
+  remove(
+    @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
+  ) {
     const result = this.albumService.remove(id);
 
     if (!result) {

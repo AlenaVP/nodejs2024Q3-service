@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -9,11 +8,12 @@ import {
   HttpStatus,
   NotFoundException,
   Param,
+  ParseUUIDPipe,
   Post,
   Put,
 } from '@nestjs/common';
 import { ErrorMessage, UpdateUserPasswordError } from '@shared/constants/enums';
-import { UuidService } from '@shared/service/uuid/uuid.service';
+import { UUID_VERSION } from '@shared/constants/uuid';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -23,10 +23,7 @@ import { UserResponseDto } from './dto/user-response.dto';
 @ApiTags('user')
 @Controller('user')
 export class UserController {
-  constructor(
-    private readonly userService: UserService,
-    private readonly uuidService: UuidService,
-  ) {}
+  constructor(private readonly userService: UserService) {}
 
   @Post()
   @ApiResponse({
@@ -39,14 +36,6 @@ export class UserController {
     description: 'Request body does not contain required fields',
   })
   create(@Body() createUserDto: CreateUserDto) {
-    const { login, password } = createUserDto;
-
-    if (!login || !password) {
-      throw new BadRequestException(
-        ErrorMessage.LOGIN_AND_PASSWORD_ARE_REQUIRED,
-      );
-    }
-
     return this.userService.create(createUserDto);
   }
 
@@ -83,11 +72,9 @@ export class UserController {
     status: HttpStatus.NOT_FOUND,
     description: 'User with provided id was not found',
   })
-  findOne(@Param('id') id: string) {
-    if (!this.uuidService.validate(id)) {
-      throw new BadRequestException(ErrorMessage.INVALID_ID);
-    }
-
+  findOne(
+    @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
+  ) {
     const user = this.userService.findOne(id);
 
     if (!user) {
@@ -101,7 +88,7 @@ export class UserController {
   @ApiParam({
     name: 'id',
     description: 'user id (uuid v4)',
-    example: '7b30a163-ed21-4f4a-b867-c00c3177940b',
+    example: 'e83cd69d-d1ef-4770-835e-5eb0537cc5c9',
     required: true,
     type: 'string',
     format: 'uuid',
@@ -124,13 +111,9 @@ export class UserController {
     description: "Provided user's password is wrong",
   })
   updatePassword(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
     @Body() updateUserDto: UpdateUserDto,
   ) {
-    if (!this.uuidService.validate(id)) {
-      throw new BadRequestException(ErrorMessage.INVALID_ID);
-    }
-
     const result = this.userService.updatePassword(id, updateUserDto);
 
     if (result === UpdateUserPasswordError.UserNotFound) {
@@ -166,11 +149,9 @@ export class UserController {
     status: HttpStatus.NOT_FOUND,
     description: 'User with provided id was not found',
   })
-  remove(@Param('id') id: string) {
-    if (!this.uuidService.validate(id)) {
-      throw new BadRequestException(ErrorMessage.INVALID_ID);
-    }
-
+  remove(
+    @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
+  ) {
     const result = this.userService.remove(id);
 
     if (!result) {

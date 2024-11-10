@@ -8,12 +8,13 @@ import {
   HttpStatus,
   NotFoundException,
   Param,
+  ParseUUIDPipe,
   Post,
   Put,
 } from '@nestjs/common';
 import { ApiTags, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { ErrorMessage } from '@shared/constants/enums';
-import { UuidService } from '@shared/service/uuid/uuid.service';
+import { UUID_VERSION } from '@shared/constants/uuid';
 import { TrackService } from './track.service';
 import { TrackResponseDto } from './dto/track-response.dto';
 import { CreateTrackDto } from './dto/create-track.dto';
@@ -22,10 +23,7 @@ import { UpdateTrackDto } from './dto/update-track.dto';
 @ApiTags('track')
 @Controller('track')
 export class TrackController {
-  constructor(
-    private readonly trackService: TrackService,
-    private uuidService: UuidService,
-  ) {}
+  constructor(private readonly trackService: TrackService) {}
 
   @Post()
   @ApiResponse({
@@ -75,11 +73,9 @@ export class TrackController {
     description: 'Track with provided id was not found',
   })
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    if (!this.uuidService.validate(id)) {
-      throw new BadRequestException(ErrorMessage.INVALID_ID);
-    }
-
+  findOne(
+    @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
+  ) {
     const track = this.trackService.findOne(id);
 
     if (!track) {
@@ -112,11 +108,10 @@ export class TrackController {
     status: HttpStatus.NOT_FOUND,
     description: 'Track with provided id was not found',
   })
-  update(@Param('id') id: string, @Body() updateTrackDto: UpdateTrackDto) {
-    if (!this.uuidService.validate(id)) {
-      throw new BadRequestException(ErrorMessage.INVALID_ID);
-    }
-
+  update(
+    @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
+    @Body() updateTrackDto: UpdateTrackDto,
+  ) {
     const updatedTrack = this.trackService.updateInfo(id, updateTrackDto);
 
     if (!updatedTrack) {
@@ -148,11 +143,9 @@ export class TrackController {
     status: HttpStatus.NOT_FOUND,
     description: 'Track with provided id was not found',
   })
-  remove(@Param('id') id: string) {
-    if (!this.uuidService.validate(id)) {
-      throw new BadRequestException(ErrorMessage.INVALID_ID);
-    }
-
+  remove(
+    @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
+  ) {
     const result = this.trackService.remove(id);
 
     if (!result) {
