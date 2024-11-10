@@ -4,11 +4,15 @@ import { UuidService } from '@shared/service/uuid/uuid.service';
 import { CreateArtistDto } from './dto/create-artist.dto';
 import { UpdateArtistDto } from './dto/update-artist.dto';
 import { Artist } from './entities/artist.entity';
+import { AlbumService } from 'src/album/album.service';
 
 @Injectable()
 export class ArtistService {
   private artistDb = new Map<string, Artist>();
-  constructor(private readonly uuidService: UuidService) {}
+  constructor(
+    private readonly albumService: AlbumService,
+    private readonly uuidService: UuidService,
+  ) {}
 
   create(createArtistDto: CreateArtistDto): Artist {
     const newArtist: Artist = {
@@ -56,6 +60,7 @@ export class ArtistService {
   remove(id: string): boolean {
     if (this.artistDb.has(id)) {
       this.artistDb.delete(id);
+      this.albumService.cleanupWithArtistDeletion(id);
       return true;
     }
 
