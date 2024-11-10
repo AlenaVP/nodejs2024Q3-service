@@ -4,13 +4,17 @@ import { UuidService } from '@shared/service/uuid/uuid.service';
 import { CreateAlbumDto } from './dto/create-album.dto';
 import { UpdateAlbumDto } from './dto/update-album.dto';
 import { Album } from './entities/album.entity';
+import { TrackService } from 'src/track/track.service';
 
 @Injectable()
 export class AlbumService {
   private albumDb = new Map<string, Album>();
   static instance: AlbumService;
 
-  constructor(private readonly uuidService: UuidService) {
+  constructor(
+    private readonly trackService: TrackService,
+    private readonly uuidService: UuidService,
+  ) {
     if (!!AlbumService.instance) {
       return AlbumService.instance;
     }
@@ -66,6 +70,7 @@ export class AlbumService {
   remove(id: string): boolean {
     if (this.albumDb.has(id)) {
       this.albumDb.delete(id);
+      this.trackService.cleanupWithAlbumDeletion(id);
       return true;
     }
 

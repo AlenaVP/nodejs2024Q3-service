@@ -5,12 +5,14 @@ import { CreateArtistDto } from './dto/create-artist.dto';
 import { UpdateArtistDto } from './dto/update-artist.dto';
 import { Artist } from './entities/artist.entity';
 import { AlbumService } from 'src/album/album.service';
+import { TrackService } from 'src/track/track.service';
 
 @Injectable()
 export class ArtistService {
   private artistDb = new Map<string, Artist>();
   constructor(
     private readonly albumService: AlbumService,
+    private readonly trackService: TrackService,
     private readonly uuidService: UuidService,
   ) {}
 
@@ -61,6 +63,7 @@ export class ArtistService {
     if (this.artistDb.has(id)) {
       this.artistDb.delete(id);
       this.albumService.cleanupWithArtistDeletion(id);
+      this.trackService.cleanupWithArtistDeletion(id);
       return true;
     }
 

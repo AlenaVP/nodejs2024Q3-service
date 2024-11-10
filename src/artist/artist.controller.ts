@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   NotFoundException,
   Param,
   Post,
@@ -66,6 +67,7 @@ export class ArtistController {
   }
 
   @Delete(':id')
+  @HttpCode(204)
   remove(@Param('id') id: string) {
     if (!this.uuidService.validate(id)) {
       throw new BadRequestException(ErrorMessage.INVALID_ID);
