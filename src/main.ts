@@ -2,16 +2,18 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as dotenv from 'dotenv';
 import { AppModule } from './app.module';
-import { PORT } from '@shared/constants/env';
 import { GlobalExceptionFilter } from '@shared/filters/global-exception/global-exception.filter';
+
+dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors();
 
   const configService = app.get(ConfigService);
-  const port = configService.get<number>('PORT') ?? PORT;
+  const port = configService.get<number>('PORT') ?? process.env.PORT;
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Home Library Service API')
     .setDescription(
