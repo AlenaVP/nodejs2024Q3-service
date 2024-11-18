@@ -4,19 +4,40 @@ FROM node:22-alpine AS development
 
 USER node
 
-# Create app directory
 WORKDIR /usr/src/app
 
-# Install app dependencies
-COPY package*.json ./
+COPY --chown=node:node prisma package*.json ./
 
-RUN npm ci
+RUN npm ci && npx prisma generate && npm cache clean --force
 
-# Bundle app source
-COPY . .
+COPY --chown=node:node . .
 
-# Expose port
-EXPOSE 4000
+# build image for production
 
-# Command to run the app
-CMD [ "npm", "run", "start" ]
+FROM node:22-alpine AS build
+
+USER node
+
+WORKDIR /usr/src/app
+
+COPY --chown=node:node package*.json ./
+
+COPY --chown=node:node --from=development /usr/src/app/node_modules ./node_modules
+
+COPY --chown=node:node . .
+
+RUN npm run build
+
+ENV NODE_ENV production
+
+RUN npm ci --omit=dev && npm cache clean --force
+
+# copy production build files & start the server
+
+FROM node:22-alpine AS production
+
+COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
+
+COPY --chown=node:node --from=build /usr/src/app/dist ./dist
+
+CMD ["node", "dist/src/main.js"]
