@@ -1,48 +1,41 @@
 import { Injectable } from '@nestjs/common';
 import { plainToClass } from 'class-transformer';
+import { Prisma } from '@prisma/client';
 import { UnknownIdException } from '@shared/exceptions/unknown-id.exception';
-import { InMemoryDbService } from '@shared/service/in-memory-db/in-memory-db.service';
-import { UuidService } from '@shared/service/uuid/uuid.service';
 import { CreateAlbumDto } from './dto/create-album.dto';
 import { UpdateAlbumDto } from './dto/update-album.dto';
 import { Album } from './entities/album.entity';
-import { TrackService } from 'src/track/track.service';
-import { FavsService } from 'src/favs/favs.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class AlbumService {
-  constructor(
-    private readonly inMemoryDbService: InMemoryDbService,
-    private readonly trackService: TrackService,
-    private readonly favsService: FavsService,
-    private readonly uuidService: UuidService,
-  ) {}
+  constructor(private readonly prismaService: PrismaService) {}
 
-  create(createAlbumDto: CreateAlbumDto): Album {
-    if (
-      createAlbumDto.artistId &&
-      !this.inMemoryDbService.artists.has(createAlbumDto.artistId)
-    ) {
-      throw new UnknownIdException('artistId');
+  async create(createAlbumDto: CreateAlbumDto): Promise<Album> {
+    try {
+      const album = await this.prismaService.album.create({ data: createAlbumDto });
+
+      return plainToClass(Album, album);
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2003' // "Foreign key constraint failed on the field: {field_name}"
+      ) {
+        throw new UnknownIdException('artistId');
+      }
+
+      throw err;
     }
-
-    const newAlbum: Album = {
-      ...createAlbumDto,
-      id: this.uuidService.generate(),
-    };
-    this.inMemoryDbService.albums.add(newAlbum.id, newAlbum);
-
-    return plainToClass(Album, newAlbum);
   }
 
-  findAll(): Album[] {
-    const albums = this.inMemoryDbService.albums.findAll();
+  async findAll(): Promise<Album[]> {
+    const albums = await this.prismaService.album.findMany();
 
     return albums.map((album) => plainToClass(Album, album));
   }
 
-  findOne(id: string): Album | null {
-    const album = this.inMemoryDbService.albums.findOne(id);
+  async findOne(id: string): Promise<Album | null> {
+    const album = this.prismaService.album.findUnique({ where: { id } });
 
     if (!album) {
       return null;
@@ -51,56 +44,45 @@ export class AlbumService {
     return plainToClass(Album, album);
   }
 
-  findMany(ids: string[]): Album[] {
-    const albums = this.inMemoryDbService.albums.findMany(ids);
+  async updateInfo(
+    id: string,
+    updateAlbumDto: UpdateAlbumDto,
+  ): Promise<Album | null> {
+    try {
+      const updatedAlbum = await this.prismaService.album.update({
+        where: { id },
+        data: updateAlbumDto,
+      });
 
-    return albums.map((album) => plainToClass(Album, album));
-  }
-
-  isExists(id: string): boolean {
-    return this.inMemoryDbService.albums.has(id);
-  }
-
-  updateInfo(id: string, updateAlbumDto: UpdateAlbumDto): Album | null {
-    if (
-      updateAlbumDto.artistId &&
-      !this.inMemoryDbService.artists.has(updateAlbumDto.artistId)
-    ) {
-      throw new UnknownIdException('artistId');
-    }
-
-    const album = this.inMemoryDbService.albums.findOne(id);
-
-    if (!album) {
-      return null;
-    }
-
-    const updatedAlbum: Album = {
-      ...album,
-      ...updateAlbumDto,
-    };
-
-    this.inMemoryDbService.albums.add(album.id, updatedAlbum);
-
-    return plainToClass(Album, updatedAlbum);
-  }
-
-  remove(id: string): boolean {
-    if (this.inMemoryDbService.albums.has(id)) {
-      this.favsService.removeAlbum(id);
-      this.trackService.handleAlbumRemoval(id);
-
-      return this.inMemoryDbService.albums.delete(id);
-    }
-
-    return false;
-  }
-
-  handleArtistRemoval(id: string): void {
-    this.inMemoryDbService.albums.forEach((album) => {
-      if (album.artistId === id) {
-        album.artistId = null;
+      return plainToClass(Album, updatedAlbum);
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        if (err.code === 'P2025') {
+          // record not found
+          return null;
+        } else if (err.code === 'P2003') {
+          // "Foreign key constraint failed on the field: {field_name}"
+          throw new UnknownIdException('artistId');
+        }
       }
-    });
+      throw err;
+    }
+  }
+
+  async remove(id: string): Promise<boolean> {
+    try {
+      await this.prismaService.album.delete({ where: { id } });
+
+      return true;
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2025' // record not found
+      ) {
+        return false;
+      }
+
+      throw err;
+    }
   }
 }

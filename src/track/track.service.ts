@@ -1,53 +1,58 @@
 import { Injectable } from '@nestjs/common';
 import { plainToClass } from 'class-transformer';
+import { Prisma } from '@prisma/client';
 import { UnknownIdException } from '@shared/exceptions/unknown-id.exception';
-import { InMemoryDbService } from '@shared/service/in-memory-db/in-memory-db.service';
-import { UuidService } from '@shared/service/uuid/uuid.service';
 import { CreateTrackDto } from './dto/create-track.dto';
 import { UpdateTrackDto } from './dto/update-track.dto';
 import { Track } from './entities/track.entity';
-import { FavsService } from 'src/favs/favs.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class TrackService {
-  constructor(
-    private readonly inMemoryDbService: InMemoryDbService,
-    private readonly favsService: FavsService,
-    private readonly uuidService: UuidService,
-  ) {}
+  constructor(private readonly prismaService: PrismaService) {}
 
-  create(createTrackDto: CreateTrackDto): Track {
-    if (
-      createTrackDto.artistId &&
-      !this.inMemoryDbService.artists.has(createTrackDto.artistId)
-    ) {
-      throw new UnknownIdException('artistId');
+  async create({
+    name,
+    duration,
+    artistId,
+    albumId,
+  }: CreateTrackDto): Promise<Track> {
+    try {
+      const track = await this.prismaService.track.create({
+        data: {
+          name,
+          duration,
+          artist: artistId !== null ? { connect: { id: artistId } } : undefined,
+          album: albumId !== null ? { connect: { id: albumId } } : undefined,
+        },
+      });
+
+      return plainToClass(Track, track);
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2025' && // "An operation failed because it depends on one or more records that were required but not found. {cause}"
+        typeof err.meta.cause === 'string'
+      ) {
+        if (err.meta.cause.includes('Album')) {
+          throw new UnknownIdException('albumId');
+        } else if (err.meta.cause.includes('Artist')) {
+          throw new UnknownIdException('artistId');
+        }
+      }
+
+      throw err;
     }
-
-    if (
-      createTrackDto.albumId &&
-      !this.inMemoryDbService.albums.has(createTrackDto.albumId)
-    ) {
-      throw new UnknownIdException('albumId');
-    }
-
-    const newTrack: Track = {
-      ...createTrackDto,
-      id: this.uuidService.generate(),
-    };
-    this.inMemoryDbService.tracks.add(newTrack.id, newTrack);
-
-    return plainToClass(Track, newTrack);
   }
 
-  findAll(): Track[] {
-    const tracks = this.inMemoryDbService.tracks.findAll();
+  async findAll(): Promise<Track[]> {
+    const tracks = await this.prismaService.track.findMany();
 
     return tracks.map((track) => plainToClass(Track, track));
   }
 
-  findOne(id: string): Track | null {
-    const track = this.inMemoryDbService.tracks.findOne(id);
+  async findOne(id: string): Promise<Track | null> {
+    const track = await this.prismaService.track.findUnique({ where: { id } });
 
     if (!track) {
       return null;
@@ -56,66 +61,55 @@ export class TrackService {
     return plainToClass(Track, track);
   }
 
-  findMany(ids: string[]): Track[] {
-    const tracks = this.inMemoryDbService.tracks.findMany(ids);
+  async updateInfo(
+    id: string,
+    { name, duration, artistId, albumId }: UpdateTrackDto,
+  ): Promise<Track | null> {
+    try {
+      const updatedTrack = await this.prismaService.track.update({
+        where: { id },
+        data: {
+          name,
+          duration,
+          artist: artistId !== null ? { connect: { id: artistId } } : undefined,
+          album: albumId !== null ? { connect: { id: albumId } } : undefined,
+        },
+      });
 
-    return tracks.map((track) => plainToClass(Track, track));
-  }
-
-  isExists(id: string): boolean {
-    return this.inMemoryDbService.tracks.has(id);
-  }
-
-  updateInfo(id: string, updateTrackDto: UpdateTrackDto): Track | null {
-    if (
-      updateTrackDto.artistId &&
-      !this.inMemoryDbService.artists.has(updateTrackDto.artistId)
-    ) {
-      throw new UnknownIdException('artistId');
-    }
-
-    if (
-      updateTrackDto.albumId &&
-      !this.inMemoryDbService.albums.has(updateTrackDto.albumId)
-    ) {
-      throw new UnknownIdException('albumId');
-    }
-
-    const track = this.inMemoryDbService.tracks.findOne(id);
-
-    if (!track) {
-      return null;
-    }
-
-    const updatedTrack: Track = {
-      ...track,
-      ...updateTrackDto,
-    };
-
-    this.inMemoryDbService.tracks.add(track.id, updatedTrack);
-
-    return plainToClass(Track, updatedTrack);
-  }
-
-  remove(id: string): boolean {
-    this.favsService.removeTrack(id);
-
-    return this.inMemoryDbService.tracks.delete(id);
-  }
-
-  handleAlbumRemoval(id: string): void {
-    this.inMemoryDbService.tracks.forEach((track) => {
-      if (track.albumId === id) {
-        track.albumId = null;
+      return plainToClass(Track, updatedTrack);
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2025' && // record not found
+        typeof err.meta.cause === 'string'
+      ) {
+        if (err.meta.cause.includes('Album')) {
+          throw new UnknownIdException('albumId');
+        } else if (err.meta.cause.includes('Artist')) {
+          throw new UnknownIdException('artistId');
+        } else {
+          return null;
+        }
       }
-    });
+
+      throw err;
+    }
   }
 
-  handleArtistRemoval(id: string): void {
-    this.inMemoryDbService.tracks.forEach((track) => {
-      if (track.artistId === id) {
-        track.artistId = null;
+  async remove(id: string): Promise<boolean> {
+    try {
+      await this.prismaService.track.delete({ where: { id } });
+
+      return true;
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2025' // record not found
+      ) {
+        return false;
       }
-    });
+
+      throw err;
+    }
   }
 }

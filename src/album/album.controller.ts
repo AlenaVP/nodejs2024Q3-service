@@ -35,8 +35,8 @@ export class AlbumController {
     description:
       'Request body does not contain required fields or artistId in DTO is invalid or points to non-existing entity',
   })
-  create(@Body() createAlbumDto: CreateAlbumDto) {
-    return this.albumService.create(createAlbumDto);
+  async create(@Body() createAlbumDto: CreateAlbumDto) {
+    return await this.albumService.create(createAlbumDto);
   }
 
   @Get()
@@ -46,8 +46,8 @@ export class AlbumController {
     type: AlbumResponseDto,
     isArray: true,
   })
-  findAll() {
-    return this.albumService.findAll();
+  async findAll() {
+    return await this.albumService.findAll();
   }
 
   @Get(':id')
@@ -72,10 +72,10 @@ export class AlbumController {
     status: HttpStatus.NOT_FOUND,
     description: 'Album with provided id was not found',
   })
-  findOne(
+  async findOne(
     @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
   ) {
-    const album = this.albumService.findOne(id);
+    const album = await this.albumService.findOne(id);
 
     if (!album) {
       throw new NotFoundException(ErrorMessage.ALBUM_NOT_FOUND);
@@ -107,11 +107,14 @@ export class AlbumController {
     status: HttpStatus.NOT_FOUND,
     description: 'Album with provided id was not found',
   })
-  update(
+  async updateInfo(
     @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
     @Body() updateAlbumDto: UpdateAlbumDto,
   ) {
-    const updatedAlbum = this.albumService.updateInfo(id, updateAlbumDto);
+    const updatedAlbum = await this.albumService.updateInfo(
+      id,
+      updateAlbumDto,
+    );
 
     if (!updatedAlbum) {
       throw new NotFoundException(ErrorMessage.ALBUM_NOT_FOUND);
@@ -142,10 +145,10 @@ export class AlbumController {
     status: HttpStatus.NOT_FOUND,
     description: 'Album with provided id was not found',
   })
-  remove(
+  async remove(
     @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
   ) {
-    const result = this.albumService.remove(id);
+    const result = await this.albumService.remove(id);
 
     if (!result) {
       throw new NotFoundException(ErrorMessage.ALBUM_NOT_FOUND);

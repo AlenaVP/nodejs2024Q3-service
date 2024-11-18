@@ -1,4 +1,4 @@
-import { Exclude } from 'class-transformer';
+import { Exclude, Transform } from 'class-transformer';
 import { UserBase } from '../user.interface';
 
 export class User implements UserBase {
@@ -11,7 +11,9 @@ export class User implements UserBase {
 
   version: number;
 
+  @Transform(({ value }) => new Date(value).getTime())
   createdAt: number;
 
+  @Transform(({ value }) => new Date(value).getTime())
   updatedAt: number;
 }

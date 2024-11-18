@@ -35,8 +35,8 @@ export class UserController {
     status: HttpStatus.BAD_REQUEST,
     description: 'Request body does not contain required fields',
   })
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
+  async create(@Body() createUserDto: CreateUserDto) {
+    return await this.userService.create(createUserDto);
   }
 
   @Get()
@@ -46,8 +46,8 @@ export class UserController {
     type: UserResponseDto,
     isArray: true,
   })
-  findAll() {
-    return this.userService.findAll();
+  async findAll() {
+    return await this.userService.findAll();
   }
 
   @Get(':id')
@@ -72,10 +72,10 @@ export class UserController {
     status: HttpStatus.NOT_FOUND,
     description: 'User with provided id was not found',
   })
-  findOne(
+  async findOne(
     @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
   ) {
-    const user = this.userService.findOne(id);
+    const user = await this.userService.findOne(id);
 
     if (!user) {
       throw new NotFoundException(ErrorMessage.USER_NOT_FOUND);
@@ -110,11 +110,11 @@ export class UserController {
     status: HttpStatus.FORBIDDEN,
     description: "Provided user's password is wrong",
   })
-  updatePassword(
+  async updatePassword(
     @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
     @Body() updateUserDto: UpdateUserDto,
   ) {
-    const result = this.userService.updatePassword(id, updateUserDto);
+    const result = await this.userService.updatePassword(id, updateUserDto);
 
     if (result === UpdateUserPasswordError.UserNotFound) {
       throw new NotFoundException(ErrorMessage.USER_NOT_FOUND);
@@ -149,10 +149,10 @@ export class UserController {
     status: HttpStatus.NOT_FOUND,
     description: 'User with provided id was not found',
   })
-  remove(
+  async remove(
     @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
   ) {
-    const result = this.userService.remove(id);
+    const result = await this.userService.remove(id);
 
     if (!result) {
       throw new NotFoundException(ErrorMessage.USER_NOT_FOUND);

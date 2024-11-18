@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -35,8 +34,8 @@ export class ArtistController {
     status: HttpStatus.BAD_REQUEST,
     description: 'Request body does not contain required fields',
   })
-  create(@Body() createArtistDto: CreateArtistDto) {
-    return this.artistService.create(createArtistDto);
+  async create(@Body() createArtistDto: CreateArtistDto) {
+    return await this.artistService.create(createArtistDto);
   }
 
   @Get()
@@ -46,8 +45,8 @@ export class ArtistController {
     type: ArtistResponseDto,
     isArray: true,
   })
-  findAll() {
-    return this.artistService.findAll();
+  async findAll() {
+    return await this.artistService.findAll();
   }
 
   @Get(':id')
@@ -72,10 +71,10 @@ export class ArtistController {
     status: HttpStatus.NOT_FOUND,
     description: 'Artist with provided id was not found',
   })
-  findOne(
+  async findOne(
     @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
   ) {
-    const artist = this.artistService.findOne(id);
+    const artist = await this.artistService.findOne(id);
 
     if (!artist) {
       throw new NotFoundException(ErrorMessage.ARTIST_NOT_FOUND);
@@ -106,11 +105,14 @@ export class ArtistController {
     status: HttpStatus.NOT_FOUND,
     description: 'Artist with provided id was not found',
   })
-  updateInfo(
+  async updateInfo(
     @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
     @Body() updateArtistDto: UpdateArtistDto,
   ) {
-    const updatedArtist = this.artistService.updateInfo(id, updateArtistDto);
+    const updatedArtist = await this.artistService.updateInfo(
+      id,
+      updateArtistDto,
+    );
 
     if (!updatedArtist) {
       throw new NotFoundException(ErrorMessage.ARTIST_NOT_FOUND);
@@ -141,10 +143,10 @@ export class ArtistController {
     status: HttpStatus.NOT_FOUND,
     description: 'Artist with provided id was not found',
   })
-  remove(
+  async remove(
     @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
   ) {
-    const result = this.artistService.remove(id);
+    const result = await this.artistService.remove(id);
 
     if (!result) {
       throw new NotFoundException(ErrorMessage.ARTIST_NOT_FOUND);

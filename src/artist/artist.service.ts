@@ -1,42 +1,31 @@
 import { Injectable } from '@nestjs/common';
 import { plainToClass } from 'class-transformer';
-import { InMemoryDbService } from '@shared/service/in-memory-db/in-memory-db.service';
-import { UuidService } from '@shared/service/uuid/uuid.service';
+import { Prisma } from '@prisma/client';
 import { CreateArtistDto } from './dto/create-artist.dto';
 import { UpdateArtistDto } from './dto/update-artist.dto';
 import { Artist } from './entities/artist.entity';
-import { AlbumService } from 'src/album/album.service';
-import { TrackService } from 'src/track/track.service';
-import { FavsService } from 'src/favs/favs.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class ArtistService {
-  constructor(
-    private readonly albumService: AlbumService,
-    private readonly inMemoryDbService: InMemoryDbService,
-    private readonly trackService: TrackService,
-    private readonly favsService: FavsService,
-    private readonly uuidService: UuidService,
-  ) {}
+  constructor(private readonly prismaService: PrismaService) {}
 
-  create(createArtistDto: CreateArtistDto): Artist {
-    const newArtist: Artist = {
-      ...createArtistDto,
-      id: this.uuidService.generate(),
-    };
-    this.inMemoryDbService.artists.add(newArtist.id, newArtist);
+  async create(createArtistDto: CreateArtistDto): Promise<Artist> {
+    const newArtist = await this.prismaService.artist.create({ data: createArtistDto });
 
     return plainToClass(Artist, newArtist);
   }
 
-  findAll(): Artist[] {
-    const artists = this.inMemoryDbService.artists.findAll();
+  async findAll(): Promise<Artist[]> {
+    const artists = await this.prismaService.artist.findMany();
 
     return artists.map((artist) => plainToClass(Artist, artist));
   }
 
-  findOne(id: string): Artist | null {
-    const artist = this.inMemoryDbService.artists.findOne(id);
+  async findOne(id: string): Promise<Artist | null> {
+    const artist = await this.prismaService.artist.findUnique({
+      where: { id },
+    });
 
     if (!artist) {
       return null;
@@ -45,42 +34,45 @@ export class ArtistService {
     return plainToClass(Artist, artist);
   }
 
-  findMany(ids: string[]): Artist[] {
-    const artists = this.inMemoryDbService.artists.findMany(ids);
+  async updateInfo(
+    id: string,
+    updateArtistDto: UpdateArtistDto,
+  ): Promise<Artist | null> {
+    try {
+      const updatedArtist = await this.prismaService.artist.update({
+        where: { id },
+        data: updateArtistDto,
+      });
 
-    return artists.map((artist) => plainToClass(Artist, artist));
-  }
+      return plainToClass(Artist, updatedArtist);
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2025' // record not found
+      ) {
+        return null;
+      }
 
-  isExists(id: string): boolean {
-    return this.inMemoryDbService.artists.has(id);
-  }
-
-  updateInfo(id: string, updateArtistDto: UpdateArtistDto): Artist | null {
-    const artist = this.inMemoryDbService.artists.findOne(id);
-
-    if (!artist) {
-      return null;
+      throw err;
     }
-
-    const updatedArtist: Artist = {
-      ...artist,
-      ...updateArtistDto,
-    };
-
-    this.inMemoryDbService.artists.add(artist.id, updatedArtist);
-
-    return plainToClass(Artist, updatedArtist);
   }
 
-  remove(id: string): boolean {
-    if (this.inMemoryDbService.artists.has(id)) {
-      this.favsService.removeArtist(id);
-      this.albumService.handleArtistRemoval(id);
-      this.trackService.handleArtistRemoval(id);
+  async remove(id: string): Promise<boolean> {
+    try {
+      await this.prismaService.artist.delete({
+        where: { id },
+      });
 
-      return this.inMemoryDbService.artists.delete(id);
+      return true;
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2025' // record not found
+      ) {
+        return false;
+      }
+
+      throw err;
     }
-
-    return false;
   }
 }

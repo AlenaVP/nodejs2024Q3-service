@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -36,8 +35,8 @@ export class TrackController {
     description:
       'Request body does not contain required fields or one of ids in DTO is invalid or points to non-existing entity',
   })
-  create(@Body() createTrackDto: CreateTrackDto) {
-    return this.trackService.create(createTrackDto);
+  async create(@Body() createTrackDto: CreateTrackDto) {
+    return await this.trackService.create(createTrackDto);
   }
 
   @Get()
@@ -47,10 +46,11 @@ export class TrackController {
     type: TrackResponseDto,
     isArray: true,
   })
-  findAll() {
-    return this.trackService.findAll();
+  async findAll() {
+    return await this.trackService.findAll();
   }
 
+  @Get(':id')
   @ApiParam({
     name: 'id',
     description: 'track id (uuid v4)',
@@ -72,11 +72,10 @@ export class TrackController {
     status: HttpStatus.NOT_FOUND,
     description: 'Track with provided id was not found',
   })
-  @Get(':id')
-  findOne(
+  async findOne(
     @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
   ) {
-    const track = this.trackService.findOne(id);
+    const track = await this.trackService.findOne(id);
 
     if (!track) {
       throw new NotFoundException(ErrorMessage.TRACK_NOT_FOUND);
@@ -108,11 +107,14 @@ export class TrackController {
     status: HttpStatus.NOT_FOUND,
     description: 'Track with provided id was not found',
   })
-  update(
+  async updateInfo(
     @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
     @Body() updateTrackDto: UpdateTrackDto,
   ) {
-    const updatedTrack = this.trackService.updateInfo(id, updateTrackDto);
+    const updatedTrack = await this.trackService.updateInfo(
+      id,
+      updateTrackDto,
+    );
 
     if (!updatedTrack) {
       throw new NotFoundException(ErrorMessage.TRACK_NOT_FOUND);
@@ -143,10 +145,10 @@ export class TrackController {
     status: HttpStatus.NOT_FOUND,
     description: 'Track with provided id was not found',
   })
-  remove(
+  async remove(
     @Param('id', new ParseUUIDPipe({ version: UUID_VERSION })) id: string,
   ) {
-    const result = this.trackService.remove(id);
+    const result = await this.trackService.remove(id);
 
     if (!result) {
       throw new NotFoundException(ErrorMessage.TRACK_NOT_FOUND);
