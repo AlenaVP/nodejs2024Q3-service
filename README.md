@@ -17,7 +17,7 @@ git clone {repository URL}
 ```
 2. To get this task result switch to `docker-db` branch:
 ```
-git switch feature/docker-orm
+git switch feature/docker-db
 ```
 
 ## Installing NPM modules
