@@ -1,7 +1,15 @@
-import { Body, Controller, HttpStatus, Post } from '@nestjs/common';
+
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  HttpStatus,
+  Post,
+} from '@nestjs/common';
 import { ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '../user/dto/create-user.dto';
+import { LoginResponseDto } from './dto/login-response.dto';
 import { UserResponseDto } from '../user/dto/user-response.dto';
 import { User } from '../user/entities/user.entity';
 
@@ -25,7 +33,28 @@ export class AuthController {
   }
 
   @Post('login')
-  async login() { }
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Successful login with provided login and password',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description:
+      'DTO is invalid (no login or password, or they are not a strings)',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Incorrect login or password',
+  })
+  async login(@Body() loginUserDto: CreateUserDto): Promise<LoginResponseDto> {
+    const response = await this.authService.login(loginUserDto);
+
+    if (!response) {
+      throw new ForbiddenException('Incorrect login or password');
+    }
+
+    return response;
+  }
 
   @Post('refresh')
   async refresh() { }

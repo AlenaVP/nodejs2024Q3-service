@@ -1,19 +1,33 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { plainToClass } from 'class-transformer';
+import * as bcrypt from 'bcrypt';
 import { Prisma } from '@prisma/client';
 import { UpdateUserPasswordError } from '@shared/constants/enums';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { EnvironmentVariables } from '@shared/interfaces/env-config';
+import { DEFAULT_SALT_ROUNDS } from './constants';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly configService: ConfigService<EnvironmentVariables>,
+    private readonly prismaService: PrismaService,
+  ) {}
 
-  async create(userDto: CreateUserDto): Promise<User> {
+  async create({ login, password }: CreateUserDto): Promise<User> {
+    const saltRounds = +this.configService.get(
+      'CRYPT_SALT',
+      DEFAULT_SALT_ROUNDS,
+      { infer: true },
+    );
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
     const user = await this.prismaService.user.create({
-      data: userDto,
+      data: { login, password: passwordHash },
     });
 
     return plainToClass(User, user);
@@ -37,6 +51,35 @@ export class UserService {
     return plainToClass(User, user);
   }
 
+  async findOneByLogin(login: string): Promise<User | null> {
+    const user = await this.prismaService.user.findUnique({
+      where: { login },
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    return plainToClass(User, user);
+  }
+
+  async remove(id: string): Promise<boolean> {
+    try {
+      await this.prismaService.user.delete({ where: { id } });
+
+      return true;
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2025' // record not found
+      ) {
+        return false;
+      }
+
+      throw err;
+    }
+  }
+
   async updatePassword(
     id: string,
     { oldPassword, newPassword }: UpdateUserDto,
@@ -47,7 +90,8 @@ export class UserService {
       return UpdateUserPasswordError.UserNotFound;
     }
 
-    if (user.password !== oldPassword) {
+    const isPasswordCorrect = await bcrypt.compare(oldPassword, user.password);
+    if (!isPasswordCorrect) {
       return UpdateUserPasswordError.WrongPassword;
     }
 
@@ -70,20 +114,15 @@ export class UserService {
     }
   }
 
-  async remove(id: string): Promise<boolean> {
-    try {
-      await this.prismaService.user.delete({ where: { id } });
+  async verifyPassword(id: string, password: string): Promise<boolean> {
+    const user = await this.prismaService.user.findUnique({ where: { id } });
 
-      return true;
-    } catch (err) {
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === 'P2025' // record not found
-      ) {
-        return false;
-      }
-
-      throw err;
+    if (!user) {
+      return false;
     }
+
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+
+    return isPasswordCorrect;
   }
 }
