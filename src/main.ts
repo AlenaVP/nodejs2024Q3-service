@@ -21,6 +21,7 @@ async function bootstrap() {
       'Home Library Service: https://github.com/AlreadyBored/nodejs-assignments/blob/main/assignments/rest-service/assignment.md',
     )
     .setVersion('0.1')
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api', app, document);

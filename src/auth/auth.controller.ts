@@ -11,7 +11,8 @@ import { ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SkipAuth } from '@shared/decorators/public';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '../user/dto/create-user.dto';
-import { LoginResponseDto } from './dto/login-response.dto';
+import { TokenResponseDto } from './dto/token-response.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { UserResponseDto } from '../user/dto/user-response.dto';
 import { User } from '../user/entities/user.entity';
 
@@ -41,6 +42,7 @@ export class AuthController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Successful login with provided login and password',
+    type: TokenResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
@@ -51,7 +53,7 @@ export class AuthController {
     status: HttpStatus.FORBIDDEN,
     description: 'Incorrect login or password',
   })
-  async login(@Body() loginUserDto: CreateUserDto): Promise<LoginResponseDto> {
+  async login(@Body() loginUserDto: CreateUserDto): Promise<TokenResponseDto> {
     const response = await this.authService.login(loginUserDto);
 
     if (!response) {
@@ -63,5 +65,26 @@ export class AuthController {
 
   @Post('refresh')
   @SkipAuth()
-  async refresh() {}
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Successful refresh, new tokens issued',
+    type: TokenResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'DTO is invalid (no refreshToken in body)',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Authentication failed (refresh token is invalid or expired)',
+  })
+  async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
+    const response = await this.authService.refresh(refreshTokenDto);
+
+    if (!response) {
+      throw new ForbiddenException('Refresh token is invalid or expired');
+    }
+
+    return response;
+  }
 }

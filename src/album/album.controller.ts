@@ -11,7 +11,7 @@ import {
   Post,
   Put,
 } from '@nestjs/common';
-import { ApiTags, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { ErrorMessage } from '@shared/constants/enums';
 import { UUID_VERSION } from '@shared/constants/uuid';
 import { AlbumService } from './album.service';
@@ -20,6 +20,7 @@ import { CreateAlbumDto } from './dto/create-album.dto';
 import { UpdateAlbumDto } from './dto/update-album.dto';
 
 @ApiTags('album')
+@ApiBearerAuth()
 @Controller('album')
 export class AlbumController {
   constructor(private readonly albumService: AlbumService) {}
