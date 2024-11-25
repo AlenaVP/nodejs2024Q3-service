@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as dotenv from 'dotenv';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from '@shared/filters/global-exception/global-exception.filter';
+import { EnvironmentVariables } from '@shared/interfaces/env-config';
 
 dotenv.config();
 
@@ -12,8 +13,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors();
 
-  const configService = app.get(ConfigService);
-  const port = configService.get<number>('PORT') ?? process.env.PORT;
+  const configService = app.get(ConfigService<EnvironmentVariables>);
+  const port = +configService.get('PORT', { infer: true });
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Home Library Service API')
     .setDescription(
