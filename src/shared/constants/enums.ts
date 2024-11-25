@@ -13,3 +13,11 @@ export enum ErrorMessage {
   USER_NOT_FOUND = 'User not found',
   WRONG_PASSWORD = 'Wrong password',
 }
+
+export enum LogLevel {
+  Verbose,
+  Debug,
+  Log,
+  Warn,
+  Error,
+}
