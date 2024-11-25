@@ -3,10 +3,12 @@ import {
   Body,
   Controller,
   ForbiddenException,
+  HttpCode,
   HttpStatus,
   Post,
 } from '@nestjs/common';
 import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { SkipAuth } from '@shared/decorators/public';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
@@ -16,9 +18,10 @@ import { User } from '../user/entities/user.entity';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   @Post('signup')
+  @SkipAuth()
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: 'The user has been successfully created',
@@ -33,6 +36,8 @@ export class AuthController {
   }
 
   @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @SkipAuth()
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Successful login with provided login and password',
@@ -57,5 +62,6 @@ export class AuthController {
   }
 
   @Post('refresh')
-  async refresh() { }
+  @SkipAuth()
+  async refresh() {}
 }

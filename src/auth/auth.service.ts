@@ -17,7 +17,7 @@ export class AuthService {
     private readonly configService: ConfigService<EnvironmentVariables>,
     private readonly jwtService: JwtService,
     private readonly userService: UserService,
-  ) { }
+  ) {}
 
   async signup(signupUserDto: CreateUserDto): Promise<User> {
     return await this.userService.create(signupUserDto);
@@ -63,14 +63,16 @@ export class AuthService {
       throw new Error('JWT_SECRET_REFRESH_KEY not found in environment');
     }
 
-    const accessToken = await this.jwtService.signAsync(
-      { sub: user.id },
-      { secret: accessSecret, expiresIn: accessExpireTime },
-    );
-    const refreshToken = await this.jwtService.signAsync(
-      { sub: user.id },
-      { secret: refreshSecret, expiresIn: refreshExpireTime },
-    );
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(
+        { userId: user.id, login: user.login },
+        { secret: accessSecret, expiresIn: accessExpireTime },
+      ),
+      this.jwtService.signAsync(
+        { userId: user.id, login: user.login },
+        { secret: refreshSecret, expiresIn: refreshExpireTime },
+      ),
+    ]);
 
     return {
       accessToken,
